@@ -1,0 +1,43 @@
+# Deployment config (lightweight Option B — Container Apps)
+
+product_name: agent-team
+team_name: <your-team> # TODO: update once dedicated team allocation exists
+
+identities:
+  npr:
+    az:
+      client_id: <NPR_OIDC_CLIENT_ID> # TODO: register federated identity in Azure AD
+  prd:
+    az:
+      client_id: <PRD_OIDC_CLIENT_ID> # TODO: register federated identity in Azure AD
+
+infra:
+  subscription_id:
+    npr: <NPR_SUBSCRIPTION_ID>
+    prd: <PRD_SUBSCRIPTION_ID>
+  tenant_id: <TENANT_ID>
+  terraform:
+    prefix: agnt0001 # TODO: allocate unique terraform prefix
+  keyvault:
+    enabled: true
+    prefix: agnt0001
+
+environments:
+  npr:
+    enabled: true
+    regions:
+      - region_name: swec
+        cloud_provider: az
+        region_location: swedencentral
+
+applications:
+  - name: agent-team
+    language: typescript
+    buildScriptPath: .
+
+tools:
+  codeql:
+    enabled: true
+    publish_alerts: true
+  dependabot:
+    publish_alerts: true

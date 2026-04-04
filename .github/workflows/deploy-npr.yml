@@ -1,0 +1,122 @@
+# Deploy NPR — builds image, pushes to GHCR, deploys to NPR via Terraform
+name: Deploy NPR
+
+on:
+    push:
+        branches: [main]
+
+permissions:
+    id-token: write # OIDC federation with Azure
+    contents: read
+    packages: write # Push to GHCR
+
+concurrency:
+    group: deploy-npr
+    cancel-in-progress: false
+
+env:
+    IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/agent-team
+    TENANT_ID: <TENANT_ID>
+
+jobs:
+    # ─── Load config ─────────────────────────────────────────────────────────────
+    load-config:
+        name: Load Config
+        runs-on: ubuntu-latest
+        outputs:
+            npr_client_id: ${{ steps.cfg.outputs.npr_client_id }}
+            npr_subscription_id: ${{ steps.cfg.outputs.npr_subscription_id }}
+            terraform_prefix: ${{ steps.cfg.outputs.terraform_prefix }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Parse workflow-config
+              id: cfg
+              run: |
+                  echo "npr_client_id=$(yq '.identities.npr.az.client_id' config/workflow-config.yml)" >> "$GITHUB_OUTPUT"
+                  echo "npr_subscription_id=$(yq '.infra.subscription_id.npr' config/workflow-config.yml)" >> "$GITHUB_OUTPUT"
+                  echo "terraform_prefix=$(yq '.infra.terraform.prefix' config/workflow-config.yml)" >> "$GITHUB_OUTPUT"
+
+    # ─── Build & push to GHCR ───────────────────────────────────────────────────
+    build:
+        name: Build & Push Image
+        runs-on: ubuntu-latest
+        outputs:
+            image_tag: ${{ steps.meta.outputs.version }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: docker/setup-buildx-action@v3
+
+            - name: Login to GHCR
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Docker metadata
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                  images: ${{ env.IMAGE_NAME }}
+                  tags: |
+                      type=sha,prefix=
+
+            - name: Build and push
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: true
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+    # ─── Deploy to NPR ──────────────────────────────────────────────────────────
+    deploy-npr:
+        name: Deploy NPR
+        needs: [load-config, build]
+        runs-on: ubuntu-latest
+        environment: npr
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Login to Azure (OIDC)
+              uses: azure/login@v2
+              with:
+                  client-id: ${{ needs.load-config.outputs.npr_client_id }}
+                  tenant-id: ${{ env.TENANT_ID }}
+                  subscription-id: ${{ needs.load-config.outputs.npr_subscription_id }}
+
+            - name: Terraform Init
+              uses: hashicorp/setup-terraform@v3
+            - run: |
+                  terraform init \
+                    -backend-config="resource_group_name=rg-agent-team-npr" \
+                    -backend-config="storage_account_name=${{ needs.load-config.outputs.terraform_prefix }}nprtf" \
+                    -backend-config="container_name=tfstate"
+              working-directory: infra/az
+              env:
+                  ARM_CLIENT_ID: ${{ needs.load-config.outputs.npr_client_id }}
+                  ARM_TENANT_ID: ${{ env.TENANT_ID }}
+                  ARM_SUBSCRIPTION_ID: ${{ needs.load-config.outputs.npr_subscription_id }}
+                  ARM_USE_OIDC: true
+
+            - name: Terraform Plan
+              run: terraform plan -var-file=terraform-values/npr.tfvars -out=tfplan
+              working-directory: infra/az
+              env:
+                  TF_VAR_image_tag: ${{ needs.build.outputs.image_tag }}
+                  ARM_CLIENT_ID: ${{ needs.load-config.outputs.npr_client_id }}
+                  ARM_TENANT_ID: ${{ env.TENANT_ID }}
+                  ARM_SUBSCRIPTION_ID: ${{ needs.load-config.outputs.npr_subscription_id }}
+                  ARM_USE_OIDC: true
+
+            - name: Terraform Apply
+              run: terraform apply tfplan
+              working-directory: infra/az
+              env:
+                  ARM_CLIENT_ID: ${{ needs.load-config.outputs.npr_client_id }}
+                  ARM_TENANT_ID: ${{ env.TENANT_ID }}
+                  ARM_SUBSCRIPTION_ID: ${{ needs.load-config.outputs.npr_subscription_id }}
+                  ARM_USE_OIDC: true
