@@ -5,7 +5,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.90"
+      version = "~> 5.10"
     }
   }
   # Store state in Azure Blob — replace with your values
