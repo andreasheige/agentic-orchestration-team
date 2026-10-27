@@ -17,8 +17,8 @@
         "agent-team": "tsx cli/agent-team.ts"
     },
     "dependencies": {
-        "@azure/identity": "^4.13.1",
-        "@nestjs-modules/ioredis": "^2.0.2",
+        "@azure/identity": "^4.14.0",
+        "@nestjs-modules/ioredis": "^2.3.1",
         "@nestjs/bull": "^10.2.3",
         "@nestjs/common": "^10.4.15",
         "@nestjs/config": "^3.3.0",
@@ -41,7 +41,7 @@
         "@types/express": "^5.0.0",
         "@types/node": "^22.10.0",
         "@types/passport-jwt": "^4.0.1",
-        "tsx": "^4.21.0",
+        "tsx": "^4.23.15",
         "typescript": "^5.7.2"
     }
 }
