@@ -27,7 +27,7 @@
         "@nestjs/passport": "^10.0.3",
         "@nestjs/platform-express": "^10.4.15",
         "bull": "^4.16.5",
-        "ioredis": "^5.4.2",
+        "ioredis": "^6.0.0",
         "openai": "^4.77.0",
         "passport": "^0.7.0",
         "passport-jwt": "^4.0.1",
