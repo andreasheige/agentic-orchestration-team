@@ -28,7 +28,7 @@ jobs:
             npr_subscription_id: ${{ steps.cfg.outputs.npr_subscription_id }}
             terraform_prefix: ${{ steps.cfg.outputs.terraform_prefix }}
         steps:
-            - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
             - name: Parse workflow-config
               id: cfg
               run: |
@@ -43,7 +43,7 @@ jobs:
         outputs:
             image_tag: ${{ steps.meta.outputs.version }}
         steps:
-            - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
             - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
@@ -79,7 +79,7 @@ jobs:
         runs-on: ubuntu-latest
         environment: npr
         steps:
-            - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
             - name: Login to Azure (OIDC)
               uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
